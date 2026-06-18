@@ -9,10 +9,10 @@ function App() {
     <main className="shell">
       <header className="hero">
         <div className="hero-copy">
-          <p className="eyebrow">Embedded AI feasibility</p>
-          <h1>Footprint</h1>
+          <p className="eyebrow">Edge ML feasibility Advisor</p>
+          <h1>Footprint AI</h1>
           <p>
-            Turn datasheets and firmware into practical edge ML pipeline decisions, memory budgets,
+            Turn datasheets and firmware into practical edge ML pipeline suggestions, memory budgets,
             and deployment tradeoffs for constrained hardware.
           </p>
         </div>
@@ -118,6 +118,7 @@ function AnalyzeTab() {
           <label className="upload-card">
             <span>Upload datasheet file</span>
             <small>{datasheetFileName || "Text files work in the browser MVP."}</small>
+            <span className="upload-action">Choose datasheet</span>
             <input
               type="file"
               accept=".txt,.md,.csv,.json,.c,.h"
@@ -127,7 +128,12 @@ function AnalyzeTab() {
 
           <label className="upload-card">
             <span>Upload firmware/code directory</span>
-            <small>Select your source folder; readable code files will be analyzed.</small>
+            <small>
+              {firmwareFileNames.length > 0
+                ? `${firmwareFileNames.length} readable code file(s) selected.`
+                : "Select your source folder; readable code files will be analyzed."}
+            </small>
+            <span className="upload-action">Choose folder</span>
             <input
               type="file"
               multiple

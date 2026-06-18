@@ -174,10 +174,26 @@ textarea:focus {
 }
 
 .upload-card {
+  position: relative;
+  display: flex;
+  min-height: 150px;
+  cursor: pointer;
+  flex-direction: column;
+  justify-content: space-between;
   border: 1px dashed rgba(125, 211, 252, 0.35);
   border-radius: 18px;
   background: rgba(14, 165, 233, 0.08);
   padding: 14px;
+  transition:
+    border-color 160ms ease,
+    background 160ms ease,
+    transform 160ms ease;
+}
+
+.upload-card:hover {
+  transform: translateY(-1px);
+  border-color: rgba(125, 211, 252, 0.65);
+  background: rgba(14, 165, 233, 0.13);
 }
 
 .upload-card span {
@@ -191,11 +207,24 @@ textarea:focus {
   line-height: 1.5;
 }
 
-.upload-card input {
-  margin-top: 4px;
-  padding: 0;
-  border: 0;
-  background: transparent;
+.upload-action {
+  width: fit-content;
+  margin-top: 12px;
+  border-radius: 999px;
+  background: rgba(37, 99, 235, 0.35);
+  padding: 9px 13px;
+  color: #dbeafe;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.upload-card input[type="file"] {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  opacity: 0;
+  pointer-events: none;
 }
 
 .file-summary {
