@@ -1,23 +1,6 @@
-import { FormEvent, useMemo, useState } from "react";
+import { ChangeEvent, FormEvent, useState } from "react";
 import { analyzeSystem } from "./api";
 import type { AnalysisResult } from "./types";
-
-const SAMPLE_FIRMWARE = {
-  "src/main.c": `#include "arm_math.h"
-#include "tensorflow/lite/micro/micro_interpreter.h"
-
-static int16_t pdm_buffer[2048];
-
-void HAL_ADC_ConvCpltCallback(void) {
-  // sensor sampling interrupt
-}
-
-void app_main(void) {
-  MicroInterpreter interpreter;
-}`,
-};
-
-const PRIORITIES = ["memory", "latency", "energy", "accuracy", "cost"];
 
 function App() {
   const [activeTab, setActiveTab] = useState<"analyze" | "about">("analyze");
@@ -25,12 +8,12 @@ function App() {
   return (
     <main className="shell">
       <header className="hero">
-        <div>
+        <div className="hero-copy">
           <p className="eyebrow">Embedded AI feasibility</p>
           <h1>Footprint</h1>
           <p>
-            Parse hardware constraints, inspect firmware signals, retrieve similar TinyML
-            implementations, and prepare LLM-ready JSON for edge ML pipeline design.
+            Turn datasheets and firmware into practical edge ML pipeline decisions, memory budgets,
+            and deployment tradeoffs for constrained hardware.
           </p>
         </div>
         <nav className="tabs" aria-label="Primary navigation">
@@ -55,25 +38,38 @@ function App() {
 }
 
 function AnalyzeTab() {
-  const [datasheetText, setDatasheetText] = useState(
-    "STM32F407 Cortex-M4 MCU, 168 MHz, 1 MB Flash, 192 KB SRAM, FPU, DSP, ADC, I2S, SPI, UART. Low power sleep modes. Microphone input over I2S.",
+  const [datasheetText, setDatasheetText] = useState("");
+  const [datasheetFileName, setDatasheetFileName] = useState("");
+  const [firmwareFiles, setFirmwareFiles] = useState<Record<string, string>>({});
+  const [projectDescription, setProjectDescription] = useState(
+    "I want to evaluate edge ML pipelines for this device and understand memory, latency, and firmware integration constraints.",
   );
-  const [firmwareJson, setFirmwareJson] = useState(JSON.stringify(SAMPLE_FIRMWARE, null, 2));
-  const [goal, setGoal] = useState(
-    "Suggest practical edge ML pipelines for recognizing audio events on this embedded system.",
-  );
-  const [priorities, setPriorities] = useState(["memory", "latency"]);
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  const firmwareFileCount = useMemo(() => {
-    try {
-      return Object.keys(JSON.parse(firmwareJson)).length;
-    } catch {
-      return 0;
+  async function handleDatasheetFile(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    if (!file) {
+      return;
     }
-  }, [firmwareJson]);
+
+    setDatasheetFileName(file.name);
+    setDatasheetText(await file.text());
+  }
+
+  async function handleFirmwareDirectory(event: ChangeEvent<HTMLInputElement>) {
+    const selectedFiles = Array.from(event.target.files ?? []);
+    const readableFiles = selectedFiles.filter(isReadableFirmwareFile);
+    const entries = await Promise.all(
+      readableFiles.map(async (file) => [
+        file.webkitRelativePath || file.name,
+        await file.text(),
+      ] as const),
+    );
+
+    setFirmwareFiles(Object.fromEntries(entries));
+  }
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
@@ -81,12 +77,11 @@ function AnalyzeTab() {
     setLoading(true);
 
     try {
-      const firmwareFiles = JSON.parse(firmwareJson) as Record<string, string>;
       const response = await analyzeSystem({
         datasheet_text: datasheetText,
         firmware_files: firmwareFiles,
-        user_goal: goal,
-        priorities,
+        user_goal: projectDescription,
+        priorities: ["memory", "latency"],
       });
       setResult(response);
     } catch (unknownError) {
@@ -96,62 +91,69 @@ function AnalyzeTab() {
     }
   }
 
+  const firmwareFileNames = Object.keys(firmwareFiles);
+
   return (
     <section className="workspace">
       <form className="panel form-panel" onSubmit={handleSubmit}>
         <div className="panel-heading">
           <div>
             <p className="eyebrow">Inputs</p>
-            <h2>System Context</h2>
+            <h2>Upload System Context</h2>
           </div>
-          <span className="pill">{firmwareFileCount} firmware file(s)</span>
+          <span className="pill">{firmwareFileNames.length} code file(s)</span>
         </div>
 
         <label>
-          Datasheet text
+          Datasheet text or extracted notes
           <textarea
             value={datasheetText}
             onChange={(event) => setDatasheetText(event.target.value)}
-            rows={8}
+            placeholder="Paste datasheet text, or upload a text-based datasheet below."
+            rows={7}
           />
         </label>
 
-        <label>
-          Firmware files JSON
-          <textarea
-            value={firmwareJson}
-            onChange={(event) => setFirmwareJson(event.target.value)}
-            rows={12}
-            spellCheck={false}
-          />
-        </label>
+        <div className="upload-grid">
+          <label className="upload-card">
+            <span>Upload datasheet file</span>
+            <small>{datasheetFileName || "Text files work in the browser MVP."}</small>
+            <input
+              type="file"
+              accept=".txt,.md,.csv,.json,.c,.h"
+              onChange={handleDatasheetFile}
+            />
+          </label>
 
-        <label>
-          Goal
-          <input value={goal} onChange={(event) => setGoal(event.target.value)} />
-        </label>
+          <label className="upload-card">
+            <span>Upload firmware/code directory</span>
+            <small>Select your source folder; readable code files will be analyzed.</small>
+            <input
+              type="file"
+              multiple
+              onChange={handleFirmwareDirectory}
+              {...directoryInputProps}
+            />
+          </label>
+        </div>
 
-        <fieldset>
-          <legend>Optimization priorities</legend>
-          <div className="chips">
-            {PRIORITIES.map((priority) => (
-              <label className="chip" key={priority}>
-                <input
-                  type="checkbox"
-                  checked={priorities.includes(priority)}
-                  onChange={(event) => {
-                    setPriorities((current) =>
-                      event.target.checked
-                        ? [...current, priority]
-                        : current.filter((item) => item !== priority),
-                    );
-                  }}
-                />
-                {priority}
-              </label>
-            ))}
+        {firmwareFileNames.length > 0 ? (
+          <div className="file-summary">
+            <strong>Selected code files</strong>
+            <p>{firmwareFileNames.slice(0, 5).join(", ")}</p>
+            {firmwareFileNames.length > 5 ? <p>and {firmwareFileNames.length - 5} more...</p> : null}
           </div>
-        </fieldset>
+        ) : null}
+
+        <label>
+          Project description
+          <textarea
+            value={projectDescription}
+            onChange={(event) => setProjectDescription(event.target.value)}
+            placeholder="Describe what the device does, what signal you care about, and any constraints you already know."
+            rows={4}
+          />
+        </label>
 
         <button className="primary" type="submit" disabled={loading}>
           {loading ? "Analyzing..." : "Analyze system"}
@@ -185,13 +187,13 @@ function AnalysisResults({ result }: { result: AnalysisResult }) {
       </div>
 
       <div className="grid-two">
-        <JsonPanel title="Hardware JSON" value={result.hardware} />
-        <JsonPanel title="Firmware JSON" value={result.firmware} />
+        <JsonPanel title="Parsed Hardware Constraints" value={result.hardware} />
+        <JsonPanel title="Firmware Signals" value={result.firmware} />
       </div>
 
       <div className="panel">
-        <p className="eyebrow">RAG</p>
-        <h2>Retrieved Implementations</h2>
+        <p className="eyebrow">Examples</p>
+        <h2>Similar Implementations</h2>
         <div className="cards">
           {result.rag_matches.map((match) => (
             <article className="card" key={match.example.id}>
@@ -203,8 +205,6 @@ function AnalysisResults({ result }: { result: AnalysisResult }) {
           ))}
         </div>
       </div>
-
-      <JsonPanel title="LLM Prompt JSON" value={result.llm_prompt_json} tall />
     </>
   );
 }
@@ -213,11 +213,11 @@ function AboutTab() {
   return (
     <section className="panel about">
       <p className="eyebrow">Project</p>
-      <h2>What Footprint Is Building</h2>
+      <h2>What Footprint Offers</h2>
       <p>
-        Footprint is an embedded systems AI tool for turning hardware datasheets and firmware
-        codebases into practical edge ML pipeline recommendations. This repository currently stops
-        at deterministic analysis and LLM prompt assembly.
+        Footprint helps embedded teams turn hardware constraints and firmware context into practical
+        edge ML deployment decisions. It focuses on what will fit on-device before teams invest time
+        wiring up models, buffers, and integration code.
       </p>
       <div className="feature-grid">
         <article>
@@ -229,12 +229,18 @@ function AboutTab() {
           <p>Finds language, framework, RTOS, interface, sensor, memory, timing, and ML signals.</p>
         </article>
         <article>
-          <h3>RAG Implementations</h3>
-          <p>Retrieves similar TinyML examples from a local SQLite-backed implementation store.</p>
+          <h3>Pipeline Decision Making</h3>
+          <p>
+            Compares the device profile against known TinyML patterns for audio, motion, vision, and
+            anomaly detection.
+          </p>
         </article>
         <article>
-          <h3>LLM Handoff</h3>
-          <p>Produces a structured JSON prompt for a future LLM API integration.</p>
+          <h3>Memory Optimization</h3>
+          <p>
+            Highlights RAM, flash, buffering, quantization, and preprocessing tradeoffs that shape
+            deployment feasibility.
+          </p>
         </article>
       </div>
     </section>
@@ -245,26 +251,18 @@ function EmptyState() {
   return (
     <div className="panel empty">
       <p className="eyebrow">Ready</p>
-      <h2>Run an analysis to see pipeline candidates.</h2>
+      <h2>Upload a datasheet and firmware directory to see pipeline candidates.</h2>
       <p>
-        The output will include parsed constraints, firmware signals, retrieved examples, and the
-        exact JSON payload intended for the future LLM step.
+        The output will include parsed constraints, firmware signals, similar implementations, and
+        deployment-focused recommendations.
       </p>
     </div>
   );
 }
 
-function JsonPanel({
-  title,
-  value,
-  tall = false,
-}: {
-  title: string;
-  value: unknown;
-  tall?: boolean;
-}) {
+function JsonPanel({ title, value }: { title: string; value: unknown }) {
   return (
-    <div className={`panel json-panel ${tall ? "tall" : ""}`}>
+    <div className="panel json-panel">
       <h2>{title}</h2>
       <pre>{JSON.stringify(value, null, 2)}</pre>
     </div>
@@ -279,6 +277,33 @@ function TagList({ items }: { items: string[] }) {
       ))}
     </div>
   );
+}
+
+const directoryInputProps = {
+  webkitdirectory: "",
+  directory: "",
+};
+
+const READABLE_EXTENSIONS = new Set([
+  ".c",
+  ".cc",
+  ".cpp",
+  ".h",
+  ".hpp",
+  ".ino",
+  ".rs",
+  ".py",
+  ".cmake",
+  ".txt",
+  ".ini",
+  ".conf",
+  ".yml",
+  ".yaml",
+]);
+
+function isReadableFirmwareFile(file: File) {
+  const lowerName = file.name.toLowerCase();
+  return Array.from(READABLE_EXTENSIONS).some((extension) => lowerName.endsWith(extension));
 }
 
 export default App;

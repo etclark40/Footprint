@@ -65,5 +65,4 @@ export type AnalysisResult = {
   firmware: FirmwareSignals;
   rag_matches: RagMatch[];
   pipeline_candidates: PipelineCandidate[];
-  llm_prompt_json: Record<string, unknown>;
 };
