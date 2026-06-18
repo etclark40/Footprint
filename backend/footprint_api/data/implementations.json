@@ -1,0 +1,58 @@
+[
+  {
+    "id": "tflm-kws-cortex-m4",
+    "title": "TensorFlow Lite Micro keyword spotting on Cortex-M4",
+    "summary": "A quantized CNN keyword spotting pipeline using MFCC features and a static tensor arena on an Arm Cortex-M4 class MCU.",
+    "tags": ["audio", "keyword spotting", "tflite micro", "int8", "cmsis-nn"],
+    "hardware": ["Arm Cortex-M4", "FPU", "DSP", "microphone", "PDM", "I2S"],
+    "pipeline": ["audio capture", "MFCC", "int8 CNN", "TFLite Micro interpreter"],
+    "constraints": {
+      "ram_kb_min": 128,
+      "flash_kb_min": 512,
+      "notes": "Arena size and audio ring buffer are usually the limiting resources."
+    },
+    "source_url": "https://github.com/tensorflow/tflite-micro"
+  },
+  {
+    "id": "cmsis-nn-motion-classifier",
+    "title": "CMSIS-NN motion classification for IMU streams",
+    "summary": "A 1D CNN or dense classifier over accelerometer windows with CMSIS-DSP preprocessing and CMSIS-NN int8 inference.",
+    "tags": ["imu", "accelerometer", "motion", "cmsis-nn", "cmsis-dsp"],
+    "hardware": ["Arm Cortex-M4", "Arm Cortex-M33", "accelerometer", "gyroscope"],
+    "pipeline": ["sensor windowing", "normalization", "1D CNN", "int8 inference"],
+    "constraints": {
+      "ram_kb_min": 64,
+      "latency_ms_typical": 20,
+      "notes": "Shorter windows improve responsiveness but can reduce accuracy."
+    },
+    "source_url": "https://github.com/ARM-software/CMSIS-NN"
+  },
+  {
+    "id": "edge-impulse-fomo-camera",
+    "title": "FOMO-style visual detection on memory-constrained MCUs",
+    "summary": "A small object detection pipeline using reduced-resolution camera frames and fully quantized vision models.",
+    "tags": ["camera", "vision", "object detection", "quantized", "edge impulse"],
+    "hardware": ["camera", "Cortex-M7", "ESP32", "NPU"],
+    "pipeline": ["frame capture", "resize", "quantize", "tiny detector"],
+    "constraints": {
+      "ram_kb_min": 256,
+      "flash_kb_min": 1024,
+      "notes": "Frame buffers are often more expensive than model weights."
+    },
+    "source_url": "https://docs.edgeimpulse.com/docs/edge-impulse-studio/learning-blocks/object-detection/fomo-object-detection-for-constrained-devices"
+  },
+  {
+    "id": "classical-anomaly-low-power",
+    "title": "Classical anomaly detection for low-power sensor nodes",
+    "summary": "Rolling statistics, FFT features, or one-class classifiers used before neural inference on very small MCUs.",
+    "tags": ["anomaly detection", "low power", "tinyml", "features"],
+    "hardware": ["Cortex-M0+", "RISC-V", "ADC", "temperature", "pressure"],
+    "pipeline": ["sampling", "feature extraction", "thresholds", "one-class classifier"],
+    "constraints": {
+      "ram_kb_min": 16,
+      "flash_kb_min": 64,
+      "notes": "Good first pass when power and memory budgets are tighter than accuracy requirements."
+    },
+    "source_url": "https://www.tinyml.org/"
+  }
+]
